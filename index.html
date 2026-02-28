@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="UTF-8">
+<title>Smart Depo Panel</title>
+<style>
+body{font-family:sans-serif;background:#0a0a0a;color:white;margin:0}
+.header{padding:20px;text-align:center;font-size:24px;color:#007aff;border-bottom:1px solid #222}
+.container{display:flex;flex-wrap:wrap;justify-content:center;padding:10px}
+.card{background:#1c1c1e;margin:10px;padding:15px;border-radius:15px;width:140px;text-align:center;transition:0.3s}
+.card span{font-size:12px;color:#8e8e93}
+.card b{font-size:20px;display:block;margin-top:5px}
+.full{width:100%;max-width:340px}
+.alarm-active{background:#ff3b30}
+.alarm-normal{background:#28cd41}
+.btn{display:block;margin:25px auto;padding:15px;width:90%;max-width:300px;border-radius:15px;font-size:18px;font-weight:bold;border:none;color:white;cursor:pointer;transition:0.3s}
+.btn-on{background:#ff3b30}
+.btn-off{background:#007aff}
+@media(max-width:400px){
+  .card{width:45%;margin:5px;padding:10px}
+  .btn{width:95%}
+}
+</style>
+</head>
+<body>
+<div class="header">SMART DEPO PANEL</div>
+<div class="container">
+  <div class="card"><span>SICAKLIK</span><b id="temp">--</b></div>
+  <div class="card"><span>NEM</span><b id="hum">--</b></div>
+  <div class="card"><span>MESAFE</span><b id="dist">--</b></div>
+  <div class="card"><span>KAPI</span><b id="door">--</b></div>
+  <div id="alarmBox" class="card full alarm-normal">DURUM NORMAL</div>
+</div>
+<button id="alarmBtn" class="btn btn-off">Alarmi Ac</button>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js";
+  import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-database.js";
+
+  // ====== Firebase Konfigürasyonu ======
+  const firebaseConfig = {
+    apiKey: "AIzaSyCm18AovKTAw0KB03ncpGaZFq4Uzhb8Lxc",
+    authDomain: "smartdepo-1589d.firebaseapp.com",
+    databaseURL: "https://smartdepo-1589d-default-rtdb.firebaseio.com",
+    projectId: "smartdepo-1589d",
+    storageBucket: "smartdepo-1589d.firebasestorage.app",
+    messagingSenderId: "159218413152",
+    appId: "1:159218413152:web:10df562752247ec8a0dd05"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  const sensorRef = ref(db, 'sensordata');
+  const alarmRef = ref(db, 'alarm');
+
+  // ====== Veri Güncelleme ======
+  onValue(sensorRef, (snapshot) => {
+    const data = snapshot.val();
+    if(!data) return;
+    document.getElementById('temp').innerText = data.temperature + " °C";
+    document.getElementById('hum').innerText = data.humidity + " %";
+    document.getElementById('dist').innerText = data.distance + " cm";
+    document.getElementById('door').innerText = data.doorOpen ? "ACIK" : "KAPALI";
+
+    const box = document.getElementById('alarmBox');
+    const btn = document.getElementById('alarmBtn');
+    if(data.alarmActive){
+      box.innerText = "ALARM AKTIF";
+      box.className = "card full alarm-active";
+    } else {
+      box.innerText = "DURUM NORMAL";
+      box.className = "card full alarm-normal";
+    }
+
+    if(data.alarmEnabled){
+      btn.innerText = "Alarmi Kapat";
+      btn.className = "btn btn-on";
+    } else {
+      btn.innerText = "Alarmi Ac";
+      btn.className = "btn btn-off";
+    }
+  });
+
+  // ====== Alarm Butonu ======
+  const alarmBtn = document.getElementById('alarmBtn');
+  alarmBtn.addEventListener('click', () => {
+    onValue(alarmRef, snapshot => {
+      const current = snapshot.val();
+      set(alarmRef, !current); // tersine çevir
+    }, {onlyOnce: true});
+  });
+</script>
+</body>
+</html>

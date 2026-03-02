@@ -3,7 +3,7 @@
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta charset="UTF-8">
-<title>Smart Depo Panel</title>
+<title>Smart Depo Panel Pro</title>
 <style>
 body{font-family:sans-serif;background:#0a0a0a;color:white;margin:0}
 .header{padding:20px;text-align:center;font-size:24px;color:#007aff;border-bottom:1px solid #222}
@@ -12,33 +12,52 @@ body{font-family:sans-serif;background:#0a0a0a;color:white;margin:0}
 .card span{font-size:12px;color:#8e8e93}
 .card b{font-size:20px;display:block;margin-top:5px}
 .full{width:100%;max-width:340px}
-.alarm-active{background:#ff3b30}
+.alarm-active{background:#ff3b30; box-shadow: 0 0 20px #ff3b30;}
 .alarm-normal{background:#28cd41}
-.btn{display:block;margin:25px auto;padding:15px;width:90%;max-width:300px;border-radius:15px;font-size:18px;font-weight:bold;border:none;color:white;cursor:pointer;transition:0.3s}
+
+/* Ayarlar Bölümü */
+.settings-card {background:#1c1c1e; margin:10px; padding:20px; border-radius:15px; width:100%; max-width:340px; text-align:center; border: 1px solid #333;}
+.settings-card h3 {margin: 0 0 15px 0; font-size: 16px; color: #007aff;}
+.input-group {display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;}
+input {background:#2c2c2e; border:1px solid #3a3a3c; color:white; padding:8px; border-radius:8px; width:60px; text-align:center;}
+
+.btn{display:block;margin:10px auto;padding:15px;width:90%;max-width:340px;border-radius:15px;font-size:18px;font-weight:bold;border:none;color:white;cursor:pointer;transition:0.3s}
 .btn-on{background:#ff3b30}
 .btn-off{background:#007aff}
+.btn-save{background:#32d74b; font-size: 14px; padding: 10px;}
+
 @media(max-width:400px){
-  .card{width:45%;margin:5px;padding:10px}
-  .btn{width:95%}
+  .card{width:40%;margin:5px;padding:10px}
 }
 </style>
 </head>
 <body>
 <div class="header">SMART DEPO PANEL</div>
+
 <div class="container">
   <div class="card"><span>SICAKLIK</span><b id="temp">--</b></div>
   <div class="card"><span>NEM</span><b id="hum">--</b></div>
   <div class="card"><span>MESAFE</span><b id="dist">--</b></div>
   <div class="card"><span>KAPI</span><b id="door">--</b></div>
+  
   <div id="alarmBox" class="card full alarm-normal">DURUM NORMAL</div>
+
+  <div class="settings-card">
+    <h3>CİHAZ AYARLARI</h3>
+    <div class="input-group">
+      <span>Sıcaklık Limiti (°C)</span>
+      <input type="number" id="limitInput" value="30">
+    </div>
+    <button id="saveLimitBtn" class="btn btn-save">Limiti Güncelle</button>
+  </div>
 </div>
+
 <button id="alarmBtn" class="btn btn-off">Alarmi Ac</button>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js";
-  import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-database.js";
+  import { getDatabase, ref, onValue, set, update } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-database.js";
 
-  // ====== Firebase Konfigürasyonu ======
   const firebaseConfig = {
     apiKey: "AIzaSyCm18AovKTAw0KB03ncpGaZFq4Uzhb8Lxc",
     authDomain: "smartdepo-1589d.firebaseapp.com",
@@ -54,8 +73,9 @@ body{font-family:sans-serif;background:#0a0a0a;color:white;margin:0}
 
   const sensorRef = ref(db, 'sensordata');
   const alarmRef = ref(db, 'alarm');
+  const configRef = ref(db, 'config'); // Yeni referans
 
-  // ====== Veri Güncelleme ======
+  // ====== Veri Okuma ======
   onValue(sensorRef, (snapshot) => {
     const data = snapshot.val();
     if(!data) return;
@@ -66,29 +86,35 @@ body{font-family:sans-serif;background:#0a0a0a;color:white;margin:0}
 
     const box = document.getElementById('alarmBox');
     const btn = document.getElementById('alarmBtn');
-    if(data.alarmActive){
-      box.innerText = "ALARM AKTIF";
-      box.className = "card full alarm-active";
-    } else {
-      box.innerText = "DURUM NORMAL";
-      box.className = "card full alarm-normal";
-    }
+    
+    box.innerText = data.alarmActive ? "ALARM AKTIF" : "DURUM NORMAL";
+    box.className = data.alarmActive ? "card full alarm-active" : "card full alarm-normal";
 
-    if(data.alarmEnabled){
-      btn.innerText = "Alarmi Kapat";
-      btn.className = "btn btn-on";
-    } else {
-      btn.innerText = "Alarmi Ac";
-      btn.className = "btn btn-off";
+    btn.innerText = data.alarmEnabled ? "Alarmi Kapat" : "Alarmi Ac";
+    btn.className = data.alarmEnabled ? "btn btn-on" : "btn btn-off";
+  });
+
+  // ====== Mevcut Limiti Çekme ======
+  onValue(configRef, (snapshot) => {
+    const config = snapshot.val();
+    if(config && config.tempLimit) {
+      document.getElementById('limitInput').value = config.tempLimit;
     }
   });
 
-  // ====== Alarm Butonu ======
-  const alarmBtn = document.getElementById('alarmBtn');
-  alarmBtn.addEventListener('click', () => {
+  // ====== Limit Güncelleme Butonu ======
+  document.getElementById('saveLimitBtn').addEventListener('click', () => {
+    const newLimit = parseInt(document.getElementById('limitInput').value);
+    set(ref(db, 'config'), {
+      tempLimit: newLimit
+    }).then(() => alert("Limit başarıyla güncellendi!"));
+  });
+
+  // ====== Alarm On/Off Butonu ======
+  document.getElementById('alarmBtn').addEventListener('click', () => {
     onValue(alarmRef, snapshot => {
       const current = snapshot.val();
-      set(alarmRef, !current); // tersine çevir
+      set(alarmRef, !current);
     }, {onlyOnce: true});
   });
 </script>

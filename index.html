@@ -88,10 +88,10 @@ onValue(sensorRef, (snapshot) => {
  const data = snapshot.val();
  if(!data) return;
 
- document.getElementById("temp").innerText = data.t + " °C";
- document.getElementById("hum").innerText = data.h + " %";
- document.getElementById("dist").innerText = data.d + " cm";
- document.getElementById("door").innerText = data.k ? "AÇIK" : "KAPALI";
+document.getElementById("temp").innerText = (data.temperature ?? "--") + " °C";
+document.getElementById("hum").innerText = (data.humidity ?? "--") + " %";
+document.getElementById("dist").innerText = (data.distance ?? "--") + " cm";
+document.getElementById("door").innerText = (data.doorOpen === undefined ? "--" : (data.doorOpen ? "AÇIK" : "KAPALI"));
 
  const box = document.getElementById("alarmBox");
  const btn = document.getElementById("alarmBtn");

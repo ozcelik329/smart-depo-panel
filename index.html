@@ -1,166 +1,141 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Smart Depo Panel Pro</title>
-    <style>
-        :root {
-            --bg-color: #0a0a0a;
-            --card-bg: #1c1c1e;
-            --accent-blue: #007aff;
-            --accent-red: #ff3b30;
-            --accent-green: #28cd41;
-            --text-gray: #8e8e93;
-        }
+<meta charset="UTF-8">
+<title>Smart Depo Panel</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js"></script>
 
-        body { font-family: -apple-system, sans-serif; background: var(--bg-color); color: white; margin: 0; }
-        .header { padding: 20px; text-align: center; font-size: 24px; color: var(--accent-blue); border-bottom: 1px solid #222; font-weight: bold; }
-        
-        .container { display: flex; flex-wrap: wrap; justify-content: center; padding: 10px; max-width: 500px; margin: auto; }
-        
-        .card { background: var(--card-bg); margin: 8px; padding: 15px; border-radius: 18px; width: 140px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
-        .card span { font-size: 11px; color: var(--text-gray); letter-spacing: 1px; }
-        .card b { font-size: 22px; display: block; margin-top: 8px; }
-        
-        .full { width: 100%; max-width: 316px; margin-top: 15px; }
-        .alarm-active { background: var(--accent-red); box-shadow: 0 0 20px var(--accent-red); }
-        .alarm-normal { background: var(--accent-green); }
-
-        .btn { display: block; margin: 20px auto; padding: 16px; width: 90%; max-width: 320px; border-radius: 16px; font-size: 18px; font-weight: bold; border: none; color: white; cursor: pointer; transition: 0.2s; }
-        .btn-on { background: var(--accent-red); }
-        .btn-off { background: var(--accent-blue); }
-        .btn:active { transform: scale(0.96); }
-
-        .settings-trigger { background: transparent; color: var(--accent-blue); border: 1px solid var(--accent-blue); padding: 8px 16px; border-radius: 10px; cursor: pointer; margin-top: 10px; font-size: 14px; }
-
-        /* Modal (Gizli Panel) */
-        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px); }
-        .modal-content { background: var(--card-bg); margin: 15% auto; padding: 25px; border-radius: 25px; width: 80%; max-width: 320px; border: 1px solid #333; }
-        .input-group { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .input-group span { font-size: 14px; color: var(--text-gray); }
-        input { background: #2c2c2e; border: 1px solid #3a3a3c; color: white; padding: 10px; border-radius: 10px; width: 60px; text-align: center; font-size: 16px; }
-        
-        .close-btn { color: var(--text-gray); float: right; font-size: 24px; cursor: pointer; font-weight: bold; }
-        .save-btn { background: var(--accent-green); width: 100%; padding: 12px; border-radius: 12px; border: none; color: white; font-weight: bold; margin-top: 10px; cursor: pointer; }
-    </style>
+<style>
+body{
+  font-family: Arial;
+  background:#0f172a;
+  color:white;
+  text-align:center;
+}
+.container{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+  gap:15px;
+  margin:20px;
+}
+.card{
+  background:#1e293b;
+  padding:20px;
+  border-radius:12px;
+}
+.full{
+  grid-column:1/-1;
+}
+.alarm-active{
+  background:#dc2626;
+}
+.alarm-normal{
+  background:#16a34a;
+}
+button{
+  padding:10px 20px;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
+  font-size:16px;
+}
+.btn-on{
+  background:#ef4444;
+}
+.btn-off{
+  background:#22c55e;
+}
+</style>
 </head>
+
 <body>
 
-<div class="header">SMART DEPO PANEL</div>
+<h1>📦 Smart Depo Kontrol Paneli</h1>
 
 <div class="container">
-    <div class="card"><span>SICAKLIK</span><b id="temp">--</b></div>
-    <div class="card"><span>NEM</span><b id="hum">--</b></div>
-    <div class="card"><span>MESAFE</span><b id="dist">--</b></div>
-    <div class="card"><span>KAPI</span><b id="door">--</b></div>
-    
-    <div id="alarmBox" class="card full alarm-normal">DURUM NORMAL</div>
 
-    <button onclick="toggleModal(true)" class="settings-trigger">⚙️ Eşik Ayarlarını Düzenle</button>
+<div class="card">
+<h2>Sıcaklık</h2>
+<p id="temp">--</p>
 </div>
 
-<button id="alarmBtn" class="btn btn-off">Alarmı Aç</button>
+<div class="card">
+<h2>Nem</h2>
+<p id="hum">--</p>
+</div>
 
-<div id="settingsModal" class="modal">
-    <div class="modal-content">
-        <span class="close-btn" onclick="toggleModal(false)">&times;</span>
-        <h3 style="margin-top:0; color:var(--accent-blue)">Sistem Eşikleri</h3>
-        <div class="input-group">
-            <span>Sıcaklık (°C)</span>
-            <input type="number" id="limT">
-        </div>
-        <div class="input-group">
-            <span>Nem (%)</span>
-            <input type="number" id="limH">
-        </div>
-        <div class="input-group">
-            <span>Kapı Mesafesi (cm)</span>
-            <input type="number" id="limD">
-        </div>
-        <button id="saveLimitBtn" class="save-btn">Değişiklikleri Kaydet</button>
-    </div>
+<div class="card">
+<h2>Mesafe</h2>
+<p id="dist">--</p>
+</div>
+
+<div class="card">
+<h2>Kapı Durumu</h2>
+<p id="door">--</p>
+</div>
+
+<div id="alarmBox" class="card full alarm-normal">
+DURUM NORMAL
+</div>
+
+<div class="card full">
+<button id="alarmBtn" class="btn-off">Alarmı Aç</button>
+</div>
+
 </div>
 
 <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js";
-    import { getDatabase, ref, onValue, set, update } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-database.js";
 
-    // ====== Firebase Konfigürasyonu ======
-    const firebaseConfig = {
-        apiKey: "AIzaSyCm18AovKTAw0KB03ncpGaZFq4Uzhb8Lxc",
-        authDomain: "smartdepo-1589d.firebaseapp.com",
-        databaseURL: "https://smartdepo-1589d-default-rtdb.firebaseio.com",
-        projectId: "smartdepo-1589d",
-        storageBucket: "smartdepo-1589d.firebasestorage.app",
-        messagingSenderId: "159218413152",
-        appId: "1:159218413152:web:10df562752247ec8a0dd05"
-    };
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
+const firebaseConfig = {
+  apiKey: "AIzaSyCm18AovKTAw0KB03ncpGaZFq4Uzhb8Lxc",
+  authDomain: "smartdepo-1589d.firebaseapp.com",
+  databaseURL: "https://smartdepo-1589d-default-rtdb.firebaseio.com",
+  projectId: "smartdepo-1589d",
+  storageBucket: "smartdepo-1589d.firebasestorage.app",
+  messagingSenderId: "159218413152",
+  appId: "1:159218413152:web:10df562752247ec8a0dd05"
+};
 
-    const sensorRef = ref(db, 'sensordata');
-    const alarmRef = ref(db, 'alarm');
-    const configRef = ref(db, 'config');
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const sensorRef = ref(db, "sensordata");
 
-    // ====== Veri Okuma ======
-    onValue(sensorRef, (snapshot) => {
-        const data = snapshot.val();
-        if(!data) return;
-        document.getElementById('temp').innerText = data.temperature + " °C";
-        document.getElementById('hum').innerText = data.humidity + " %";
-        document.getElementById('dist').innerText = data.distance + " cm";
-        document.getElementById('door').innerText = data.doorOpen ? "AÇIK" : "KAPALI";
+onValue(sensorRef, (snapshot) => {
+ const data = snapshot.val();
+ if(!data) return;
 
-        const box = document.getElementById('alarmBox');
-        const btn = document.getElementById('alarmBtn');
-        
-        box.innerText = data.alarmActive ? "!!! ALARM AKTİF !!!" : "DURUM NORMAL";
-        box.className = data.alarmActive ? "card full alarm-active" : "card full alarm-normal";
+ document.getElementById("temp").innerText = data.temperature + " °C";
+ document.getElementById("hum").innerText = data.humidity + " %";
+ document.getElementById("dist").innerText = data.distance + " cm";
+ document.getElementById("door").innerText = data.doorOpen ? "AÇIK" : "KAPALI";
 
-        btn.innerText = data.alarmEnabled ? "Alarm Sistemini Kapat" : "Alarm Sistemini Aç";
-        btn.className = data.alarmEnabled ? "btn btn-on" : "btn btn-off";
-    });
+ const box = document.getElementById("alarmBox");
+ const btn = document.getElementById("alarmBtn");
 
-    // ====== Eşikleri Getir ======
-    onValue(configRef, (snapshot) => {
-        const config = snapshot.val();
-        if(config) {
-            document.getElementById('limT').value = config.tempLimit || 30;
-            document.getElementById('limH').value = config.humLimit || 60;
-            document.getElementById('limD').value = config.distLimit || 20;
-        }
-    });
+ if(data.alarmActive){
+   box.innerText="!!! ALARM AKTİF !!!";
+   box.className="card full alarm-active";
+ }else{
+   box.innerText="DURUM NORMAL";
+   box.className="card full alarm-normal";
+ }
 
-    // ====== Modal Kontrol ======
-    window.toggleModal = (show) => {
-        document.getElementById('settingsModal').style.display = show ? 'flex' : 'none';
-    };
+ btn.innerText = data.alarmEnabled ? "Alarmı Kapat" : "Alarmı Aç";
+ btn.className = data.alarmEnabled ? "btn btn-on" : "btn btn-off";
+});
 
-    // ====== Kaydetme ======
-    document.getElementById('saveLimitBtn').addEventListener('click', () => {
-        const t = parseInt(document.getElementById('limT').value);
-        const h = parseInt(document.getElementById('limH').value);
-        const d = parseInt(document.getElementById('limD').value);
+document.getElementById("alarmBtn").addEventListener("click", () => {
+  onValue(sensorRef, (snapshot) => {
+    const current = snapshot.val().alarmEnabled;
+    update(sensorRef, { alarmEnabled: !current });
+  }, { onlyOnce: true });
+});
 
-        update(configRef, {
-            tempLimit: t,
-            humLimit: h,
-            distLimit: d
-        }).then(() => {
-            alert("Yeni limitler kaydedildi ve Pico'ya gönderiliyor...");
-            toggleModal(false);
-        });
-    });
-
-    // ====== Alarm Toggle ======
-    document.getElementById('alarmBtn').addEventListener('click', () => {
-        onValue(alarmRef, snapshot => {
-            const current = snapshot.val();
-            set(alarmRef, !current);
-        }, {onlyOnce: true});
-    });
 </script>
+
 </body>
 </html>
